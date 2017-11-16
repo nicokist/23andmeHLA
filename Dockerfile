@@ -5,12 +5,13 @@ ENV LANG C.UTF-8
 RUN apt-get update && apt-get install -y \
 		python3-pip
 
+RUN apt-get install --no-install-recommends -y rabbitmq-server supervisor
+
 RUN Rscript -e 'source("https://bioconductor.org/biocLite.R"); biocLite("HIBAG")'
 
 ## Prevent cache invalidation of requirements.txt every time another file is updated.
 COPY ./requirements.txt /app/requirements.txt
 WORKDIR /app
-
 RUN pip3 install -r requirements.txt
 
 
@@ -18,5 +19,4 @@ RUN pip3 install -r requirements.txt
 COPY . /app
 
 
-ENTRYPOINT ["python3"]
-CMD ["webapp.py"]
+CMD ["/usr/bin/supervisord"]

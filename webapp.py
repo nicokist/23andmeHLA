@@ -1,58 +1,93 @@
 #!/usr/bin/env python3
 import sys
-from flask import Flask, request
-from flask_uploads import UploadSet, IMAGES, configure_uploads
+from flask import Flask, request, redirect, url_for, send_from_directory,flash 
+from werkzeug.utils import secure_filename
+import os
+import uuid
+from celery import Celery
+
+
 app = Flask(__name__)
 
+### Make Celery work (so we can run the HLA imputation pipeline in the background).
+def make_celery(app):
+    celery = Celery(app.import_name, backend=app.config['CELERY_RESULT_BACKEND'],
+                    broker=app.config['CELERY_BROKER_URL'])
+    celery.conf.update(app.config)
+    TaskBase = celery.Task
+    class ContextTask(TaskBase):
+        abstract = True
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return TaskBase.__call__(self, *args, **kwargs)
+    celery.Task = ContextTask
+    return celery
 
-app.config['UPLOADED_PHOTOS_DEST'] = '/var/uploads'
-
-photos = UploadSet('photos', IMAGES)
-configure_uploads(app, photos)
-
-@app.route('/upload', methods=['GET', 'POST'])
-def upload():
-    if request.method == 'POST' and 'photo' in request.files:
-        filename = photos.save(request.files['photo'])
-        rec = Photo(filename=filename, user=g.user.id)
-        rec.store()
-        flash("Photo saved.")
-        return redirect(url_for('show', id=rec.id))
-    return render_template('upload.html')
-
-@app.route('/photo/<id>')
-def show(id):
-    photo = Photo.load(id)
-    if photo is None:
-        abort(404)
-    url = photos.url(photo.filename)
-    return render_template('show.html', url=url, photo=photo)
+app.config.update(
+    CELERY_BROKER_URL='redis://localhost:6379',
+    CELERY_RESULT_BACKEND='redis://localhost:6379'
+)
+celery = make_celery(app)
 
 
 
-@app.route('/')
-def hello_world():
-    return """
-<html>
-<body>
-<p>{{ url_for('upload') }}</p>
+### The HLA imputation pipeline
+@celery.task()
+def add_together(a, b):
+    return a + b
 
-<form method=POST enctype=multipart/form-data action="upload">
-    <input type=file name=photo id=file>
-    <input type="submit">
-</form>
 
-<script>
-document.getElementById("file").onchange = function() {
-    document.getElementById("form").submit();
-}
-</script>
 
-</html>
-</body>
-    """
+
+UPLOAD_FOLDER = 'uploads/'
+ALLOWED_EXTENSIONS = set(['txt'])
+
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.secret_key = 'Jerusalem'
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        upload_id = str(uuid.uuid4())
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            os.mkdir(os.path.join(app.config['UPLOAD_FOLDER'],upload_id))
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'],upload_id, filename))
+            return redirect(url_for('uploaded_file',
+                                    filename=filename))
+    return '''
+    <!doctype html>
+    <title>Upload new File</title>
+    <h1>Upload new File</h1>
+    <form method=post enctype=multipart/form-data>
+      <p><input type=file name=file>
+         <input type=submit value=Upload>
+    </form>
+    '''
+
+
+@app.route('/results/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'],
+                               filename)
 
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0')
+
 
