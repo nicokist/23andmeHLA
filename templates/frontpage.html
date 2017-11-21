@@ -1,0 +1,25 @@
+<!doctype html>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<title>HLA Imputation using 23andMe data</title>
+
+<h1>HLA Imputation using 23andMe data</h1>
+<p>This website uses <a href='https://github.com/zhengxwen/HIBAG'>HIBAG</a> to impute your class I <a href='https://en.wikipedia.org/wiki/Human_leukocyte_antigen'>HLA type</a> from your 23andMe <a href="https://you.23andme.com/tools/data/download/">raw data file.</a></p>
+
+This relies on a machine learning technique which is not as accurate as traditional HLA typing. This website is for entertainment only, please do not use the results for anything serious. 
+<hr>
+<h2>Upload your 23andMe raw data file here</h2>
+<form method=post enctype=multipart/form-data>
+  <p><input type=file name=file></p>
+  <p>
+    Ethnicity: <select name='ethnicity'>
+        <option>European</option>
+        <option>Asian</option>
+        <option>Hispanic</option>
+        <option>African</option>
+    </select>
+    <input type=submit value=Upload></p>
+</form>
+
+{% for message in get_flashed_messages() %}
+  <div class=flash>{{ message }}</div>
+{% endfor %}

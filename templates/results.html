@@ -1,0 +1,39 @@
+<!doctype html>
+<title>HIBAG HLA Imputation Results</title>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<div class=page>
+  <h1>HIBAG HLA Imputation Results</h1>
+
+
+<table style="width:100%">
+  <tr>
+    <th></th>
+    <th style="text-align:left">Allele 1</th> 
+    <th style="text-align:left">Allele 2</th>
+    <th style="text-align:left">Probability</th>
+  </tr>
+  <tr>
+      <td>HLA-A</td>
+      <td>{{results['A_allele1']}}</td>
+      <td>{{results['A_allele2']}}</td> 
+      <td>{{results['A_prob']}}</td> 
+  </tr>
+  <tr>
+    <td>HLA-B</td>
+    <td>{{results['B_allele1']}}</td>
+    <td>{{results['B_allele2']}}</td> 
+    <td>{{results['B_prob']}}</td>   
+  </tr>
+  <tr>
+    <td>HLA-C</td>
+    <td>{{results['C_allele1']}}</td>
+    <td>{{results['C_allele2']}}</td> 
+    <td>{{results['C_prob']}}</td>   
+  </tr>
+
+</table>
+
+  {% for message in get_flashed_messages() %}
+    <div class=flash>{{ message }}</div>
+  {% endfor %}
+</div>
