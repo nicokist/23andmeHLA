@@ -4,7 +4,7 @@
 
 <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
 
-Calculating. This should take about two minutes.
+<div class=flash id='calculatingflash'>Upload successful. Now imputing your HLA. This page will reload automatically.</div>
 
 
 {% for message in get_flashed_messages() %}

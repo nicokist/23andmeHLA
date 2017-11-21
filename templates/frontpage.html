@@ -1,4 +1,5 @@
 <!doctype html>
+<script src={{ url_for('static', filename='jquery-3.2.1.min.js') }}></script>
 <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
 <title>HLA Imputation using 23andMe data</title>
 
@@ -17,9 +18,11 @@ This relies on a machine learning technique which is not as accurate as traditio
         <option>Hispanic</option>
         <option>African</option>
     </select>
-    <input type=submit value=Upload></p>
+    <button onclick="$('#uploadflash').show();" value=Upload>Impute my HLA</button></p>
 </form>
 
 {% for message in get_flashed_messages() %}
   <div class=flash>{{ message }}</div>
 {% endfor %}
+
+<div class=flash style="display: none;" id="uploadflash">Uploading your genome. This may take a minute.</div>

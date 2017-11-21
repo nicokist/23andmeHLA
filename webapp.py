@@ -57,13 +57,16 @@ def upload_file():
         upload_id = str(uuid.uuid4())
         # check if the post request has the file part
         if 'file' not in request.files:
-            flash('No file part')
+            flash('File not uploaded succesfully.')
             return redirect(request.url)
         file = request.files['file']
         # if user does not select file, browser also
         # submit a empty part without filename
         if file.filename == '':
             flash('No file selected.')
+            return redirect(request.url)
+        if file.filename.split('.')[-1]!='txt':
+            flash('Please select the unzipped 23andMe data. It should end in .txt')
             return redirect(request.url)
         if file:
             filename = secure_filename(file.filename)
@@ -96,6 +99,9 @@ def upload_file():
                 getHLAs.delay(uploadpath, filename, 'African')                
             return redirect(url_for('results',
                                     upload_id=upload_id))
+        else:
+            flash('Unkown error.')
+            return redirect(request.url)
     return render_template('frontpage.html')
 
 @app.route('/results/<upload_id>')
