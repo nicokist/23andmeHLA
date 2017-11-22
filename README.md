@@ -1,4 +1,6 @@
-#HLA imputation Using a 23andMe Genome
+
+# HLA imputation Using a 23andMe Genome
+
 This repository contains an web shell for the [HIBAG project](http://www.biostat.washington.edu/~bsweir/HIBAG/), implemented using flask, gunicorn, nginx and wrapped in a convenient Docker container. It can be accessed online at [hla.nicokist.com](http://hla.nicokist.com).
 
 To run it locally you should execute the following:
