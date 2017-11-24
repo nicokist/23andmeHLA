@@ -4,12 +4,18 @@
 <title>HLA Imputation using 23andMe data</title>
 
 <h1>HLA Imputation using 23andMe data</h1>
-<p>This website uses <a href='https://github.com/zhengxwen/HIBAG'>HIBAG</a> to impute your class I <a href='https://en.wikipedia.org/wiki/Human_leukocyte_antigen'>HLA type</a> from your 23andMe <a href="https://you.23andme.com/tools/data/download/">raw data file.</a></p>
+<p>This website uses <a href='https://github.com/zhengxwen/HIBAG'>HIBAG</a> [1] and associated pre-trained models to impute your class I <a href='https://en.wikipedia.org/wiki/Human_leukocyte_antigen'>HLA type</a> from your 23andMe <a href="https://you.23andme.com/tools/data/download/">raw data file.</a></p>
 
-This relies on a machine learning technique which is not as accurate as traditional HLA typing. This website is for entertainment only, please do not use the results for anything serious. 
+<p>The HLA proteins are encoded by the MHC region on chromosome 6. The method used here relies on a machine learning technique which is not as accurate as traditional HLA typing. This website is for entertainment only, please do not use the results for anything serious. </p>
+
+<p>If you don't have a 23andme genome available you can download one here. </p>
+
+[1] Zheng, X. et al. <a href="http://dx.doi.org/10.1038/tpj.2013.18">HIBAG-HLA genotype imputation with attribute bagging.</a> <i>Pharmacogenomics Journal</i> 14, 192-200 (2014). 
+
+
 <hr>
 <h2>Upload your 23andMe raw data file here</h2>
-<form method=post enctype=multipart/form-data>
+<form method=post name='uploadform' enctype=multipart/form-data>
   <p><input type=file name=file></p>
   <p>
     Ethnicity: <select name='ethnicity'>
@@ -18,11 +24,13 @@ This relies on a machine learning technique which is not as accurate as traditio
         <option>Hispanic</option>
         <option>African</option>
     </select>
-    <button onclick="$('#uploadflash').show();" value=Upload>Impute my HLA</button></p>
+</p>
 </form>
+<button value=Upload onclick="$('#uploadflash').show(500, function(){$('form').submit()})">Impute my HLA</button>
+
+<div class=flash style="display: none;" id="uploadflash">Attempting to upload your genome. This may take a minute.</div>
 
 {% for message in get_flashed_messages() %}
   <div class=flash>{{ message }}</div>
 {% endfor %}
 
-<div class=flash style="display: none;" id="uploadflash">Uploading your genome. This may take a minute.</div>
