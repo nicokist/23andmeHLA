@@ -8,7 +8,7 @@
 
 <p>The HLA proteins are encoded by the MHC region on chromosome 6. The method used here relies on a machine learning technique which is not as accurate as traditional HLA typing. This website is for entertainment only, please do not use the results for anything serious. </p>
 
-<p>If you don't have a 23andme genome available you can download one here. </p>
+<p>If you don't have a 23andme genome available you can download one <a href="https://s3-eu-west-1.amazonaws.com/dm-23andme-v3/dm_23andme_v3_110219.txt">here</a></p>
 
 [1] Zheng, X. et al. <a href="http://dx.doi.org/10.1038/tpj.2013.18">HIBAG-HLA genotype imputation with attribute bagging.</a> <i>Pharmacogenomics Journal</i> 14, 192-200 (2014). 
 
@@ -28,7 +28,7 @@
 </form>
 <button value=Upload onclick="$('#uploadflash').show(500, function(){$('form').submit()})">Impute my HLA</button>
 
-<div class=flash style="display: none;" id="uploadflash">Attempting to upload your genome. This may take a minute.</div>
+<div class=flash style="display: none;" id="uploadflash">Uploading your genome. This may take a minute.</div>
 
 {% for message in get_flashed_messages() %}
   <div class=flash>{{ message }}</div>
