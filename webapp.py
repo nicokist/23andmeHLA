@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import sys
-from flask import Flask, request, redirect, url_for, send_from_directory,flash, render_template, abort,session
+from flask import Flask, request, redirect, url_for, send_from_directory, flash, render_template, abort, session
 from werkzeug.utils import secure_filename
 import os
 import uuid
@@ -9,33 +9,44 @@ from celery.result import AsyncResult
 from subprocess import run, PIPE
 from pathlib import Path
 import csv
+
 app = Flask(__name__)
 
 ### Make Celery work (so we can run the HLA imputation pipeline in the background).
+
+
 def make_celery(app):
-    celery = Celery(app.import_name, backend=app.config['CELERY_RESULT_BACKEND'],
-                    broker=app.config['CELERY_BROKER_URL'])
+    celery = Celery(
+        app.import_name,
+        backend=app.config["CELERY_RESULT_BACKEND"],
+        broker=app.config["CELERY_BROKER_URL"],
+    )
     celery.conf.update(app.config)
     TaskBase = celery.Task
+
     class ContextTask(TaskBase):
         abstract = True
+
         def __call__(self, *args, **kwargs):
             with app.app_context():
                 return TaskBase.__call__(self, *args, **kwargs)
+
     celery.Task = ContextTask
     return celery
 
+
 app.config.update(
-    CELERY_BROKER_URL='redis://some-redis:6379',
-    CELERY_RESULT_BACKEND='redis://some-redis:6379',
-    MAX_CONTENT_LENGTH = 50 * 1024 * 1024 
+    CELERY_BROKER_URL="redis://some-redis:6379",
+    CELERY_RESULT_BACKEND="redis://some-redis:6379",
+    MAX_CONTENT_LENGTH=50 * 1024 * 1024
 )
 celery = make_celery(app)
 
 
-
 ### The HLA imputation pipeline
-@celery.task(name='HLA_pipeline')
+
+
+@celery.task(name="HLA_pipeline")
 def getHLAs(uploadpath, filename, ethnicity):
     ### Continue here. Sanity check the file and then fire of R script, collect the output.
     ### and put into databse.
@@ -44,116 +55,168 @@ def getHLAs(uploadpath, filename, ethnicity):
     ### For bonus points, same an md5sum of the file and link it to the uuid.
     ### Maybe use the md5sum instead of the uuid
     os.chdir(uploadpath)
-    plink_run=run(["plink1.9", "--23file", filename], stdout=PIPE, stderr=PIPE, encoding="utf-8")
-    HIBAG_run=run(["Rscript", "/app/HIBAG.R",ethnicity], stdout=PIPE, stderr=PIPE, encoding="utf-8")
-    os.chdir('/app/')
-    plink_serial={'returncode': plink_run.returncode, 'stdout': plink_run.stdout, 'stderr': plink_run.stderr}
-    HIBAG_serial={'returncode': HIBAG_run.returncode, 'stdout': HIBAG_run.stdout, 'stderr': HIBAG_run.stderr}
-    return({'plink': plink_serial, 'HIBAG': HIBAG_serial})
+    plink_run = run(
+        ["plink1.9", "--23file", filename], stdout=PIPE, stderr=PIPE, encoding="utf-8"
+    )
+    HIBAG_run = run(
+        ["Rscript", "/app/HIBAG.R", ethnicity],
+        stdout=PIPE,
+        stderr=PIPE,
+        encoding="utf-8",
+    )
+    os.chdir("/app/")
+    plink_serial = {
+        "returncode": plink_run.returncode,
+        "stdout": plink_run.stdout,
+        "stderr": plink_run.stderr,
+    }
+    HIBAG_serial = {
+        "returncode": HIBAG_run.returncode,
+        "stdout": HIBAG_run.stdout,
+        "stderr": HIBAG_run.stderr,
+    }
+    return ({"plink": plink_serial, "HIBAG": HIBAG_serial})
 
-UPLOAD_FOLDER = '/app/uploads/'
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.secret_key = os.environ['flask_secret_key']
+UPLOAD_FOLDER = "/app/uploads/"
 
-@app.route('/', methods=['GET', 'POST'])
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.secret_key = os.environ["flask_secret_key"]
+
+
+@app.route("/", methods=["GET", "POST"])
 def upload_file():
-    if request.method == 'POST':
+    if request.method == "POST":
         upload_id = str(uuid.uuid4())
         # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('File not uploaded succesfully.')
+        if "file" not in request.files:
+            flash("File not uploaded succesfully.")
             return redirect(request.url)
-        file = request.files['file']
+
+        file = request.files["file"]
         # if user does not select file, browser also
         # submit a empty part without filename
-        if file.filename == '':
-            flash('No file selected.')
+        if file.filename == "":
+            flash("No file selected.")
             return redirect(request.url)
-        if file.filename.split('.')[-1]!='txt':
-            flash('Please select the unzipped 23andMe data. It should end in .txt')
+
+        if file.filename.split(".")[-1] != "txt":
+            flash("Please select the unzipped 23andMe data. It should end in .txt")
             return redirect(request.url)
+
         if file:
             filename = secure_filename(file.filename)
-            if filename == '':
-                filename='sanitized_uploaded.txt'
-            uploadpath=os.path.join(app.config['UPLOAD_FOLDER'],upload_id)
+            if filename == "":
+                filename = "sanitized_uploaded.txt"
+            uploadpath = os.path.join(app.config["UPLOAD_FOLDER"], upload_id)
             os.mkdir(uploadpath)
             os.chdir(uploadpath)
             file.save(filename)
             try:
-                handle=open(filename,'r')
-                if 'This data file generated by 23andMe at' not in next(handle):
-                    flash('Error: Improperly formatted file')
+                handle = open(filename, "r")
+                if "This data file generated by 23andMe at" not in next(handle):
+                    flash("Error: Improperly formatted file")
                     return redirect(request.url)
-                if any(['reference human assembly build 36' in next(handle) for x in range(50)]):
-                    flash('Please use a more recent 23andMe raw data file. Reference assembly 36 is not supported')               
+
+                if any(
+                    [
+                        "reference human assembly build 36" in next(handle)
+                        for x in range(50)
+                    ]
+                ):
+                    flash(
+                        "Please use a more recent 23andMe raw data file. Reference assembly 36 is not supported"
+                    )
                     return redirect(request.url)
+
             except:
-                flash('Error: Improperly formatted file')               
+                flash("Error: Improperly formatted file")
                 return redirect(request.url)
 
-            if(request.values['ethnicity']=='European'):
-                session['celery_task_id'] = getHLAs.delay(uploadpath, filename, 'European').id
-            if(request.values['ethnicity']=='Asian'):
-                session['celery_task_id'] = getHLAs.delay(uploadpath, filename, 'Asian').id
-            if(request.values['ethnicity']=='Hispanic'):
-                session['celery_task_id'] = getHLAs.delay(uploadpath, filename, 'Hispanic').id
-            if(request.values['ethnicity']=='African'):
-                session['celery_task_id'] = getHLAs.delay(uploadpath, filename, 'African').id            
-            return redirect(url_for('results',
-                                    upload_id=upload_id))
+            if (request.values["ethnicity"] == "European"):
+                session["celery_task_id"] = getHLAs.delay(
+                    uploadpath, filename, "European"
+                ).id
+            if (request.values["ethnicity"] == "Asian"):
+                session["celery_task_id"] = getHLAs.delay(
+                    uploadpath, filename, "Asian"
+                ).id
+            if (request.values["ethnicity"] == "Hispanic"):
+                session["celery_task_id"] = getHLAs.delay(
+                    uploadpath, filename, "Hispanic"
+                ).id
+            if (request.values["ethnicity"] == "African"):
+                session["celery_task_id"] = getHLAs.delay(
+                    uploadpath, filename, "African"
+                ).id
+            return redirect(url_for("results", upload_id=upload_id))
+
         else:
-            flash('Unkown error.')
+            flash("Unkown error.")
             return redirect(request.url)
-    return render_template('frontpage.html')
 
-@app.route('/results/<upload_id>')
+    return render_template("frontpage.html")
+
+
+@app.route("/results/<upload_id>")
 def results(upload_id):
-    if not os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'],upload_id)):
+    if not os.path.exists(os.path.join(app.config["UPLOAD_FOLDER"], upload_id)):
         abort(404)
-    celery_result=AsyncResult(session['celery_task_id'])
+    celery_result = AsyncResult(session["celery_task_id"])
     if celery_result.ready():
-        print(celery_result.result['plink']['stdout'], flush=True)
-        print(celery_result.result['plink']['returncode'], flush=True)
-        print(celery_result.result['plink']['stderr'], flush=True)
+        print(celery_result.result["plink"]["stdout"], flush=True)
+        print(celery_result.result["plink"]["returncode"], flush=True)
+        print(celery_result.result["plink"]["stderr"], flush=True)
 
-        print(celery_result.result['HIBAG']['stdout'], flush=True)
-        print(celery_result.result['HIBAG']['returncode'], flush=True)
-        print(celery_result.result['HIBAG']['stderr'], flush=True)
-        
-        if celery_result.result['plink']['returncode']!=0:
-            flash('Error: Could not read 23andMe data file.')
-            return render_template('error.html')
-        if celery_result.result['HIBAG']['returncode']!=0:
-            if 'There is no SNP imported' in celery_result.result['HIBAG']['stderr']:
-                flash('Error: No overlap between SNPs in model and SNPs in 23andMe data file')    
-                return render_template('error.html')
+        print(celery_result.result["HIBAG"]["stdout"], flush=True)
+        print(celery_result.result["HIBAG"]["returncode"], flush=True)
+        print(celery_result.result["HIBAG"]["stderr"], flush=True)
+
+        if celery_result.result["plink"]["returncode"] != 0:
+            flash("Error: Could not read 23andMe data file.")
+            return render_template("error.html")
+
+        if celery_result.result["HIBAG"]["returncode"] != 0:
+            if "There is no SNP imported" in celery_result.result["HIBAG"]["stderr"]:
+                flash(
+                    "Error: No overlap between SNPs in model and SNPs in 23andMe data file"
+                )
+                return render_template("error.html")
+
             else:
-                flash('Error: HIBAG did not complete. Perhaps there was insufficient overlap between the trained model and the 23andMe data?')
-                return render_template('error.html')
-        HIBAG_output=os.path.join(app.config['UPLOAD_FOLDER'],upload_id,'HIBAG_output.csv')
-        results=next(csv.DictReader(open(HIBAG_output,'r'),quoting=csv.QUOTE_NONNUMERIC))
+                flash(
+                    "Error: HIBAG did not complete. Perhaps there was insufficient overlap between the trained model and the 23andMe data?"
+                )
+                return render_template("error.html")
+
+        HIBAG_output = os.path.join(
+            app.config["UPLOAD_FOLDER"], upload_id, "HIBAG_output.csv"
+        )
+        results = next(
+            csv.DictReader(open(HIBAG_output, "r"), quoting=csv.QUOTE_NONNUMERIC)
+        )
     else:
-        return render_template('waiting.html')
+        return render_template("waiting.html")
+
     ## Yes, this probably should use SQL instead of CSV files.
-    ## But this is quicker for now.    
-    results['A_prob']=round(results['A_prob'],2)
-    results['B_prob']=round(results['B_prob'],2)
-    results['C_prob']=round(results['C_prob'],2)
+    ## But this is quicker for now.
+    results["A_prob"] = round(results["A_prob"], 2)
+    results["B_prob"] = round(results["B_prob"], 2)
+    results["C_prob"] = round(results["C_prob"], 2)
     # results['DRB1_prob']=round(results['DRB1_prob'],2)
     # results['DQA1_prob']=round(results['DQA1_prob'],2)
     # results['DQB1_prob']=round(results['DQB1_prob'],2)
     # results['DPB1_prob']=round(results['DPB1_prob'],2)
 
-    return render_template('results.html', results=results)
+    return render_template("results.html", results=results)
 
 
-@app.route('/test')
+@app.route("/test")
 def test_something():
     result = add_together.delay(23, 42)
-    a=result.wait()
-    return(str(a))
+    a = result.wait()
+    return (str(a))
 
-if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0')
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0")
