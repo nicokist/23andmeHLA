@@ -43,17 +43,17 @@ app.config.update(
 celery = make_celery(app)
 
 
-### The HLA imputation pipeline
+# The HLA imputation pipeline
 
 
 @celery.task(name="HLA_pipeline")
 def getHLAs(uploadpath, filename, ethnicity):
-    ### Continue here. Sanity check the file and then fire of R script, collect the output.
-    ### and put into databse.
-    ### While this is going on the user should see a 'waiting' page
-    ### When it's done the user should be shown the output
-    ### For bonus points, same an md5sum of the file and link it to the uuid.
-    ### Maybe use the md5sum instead of the uuid
+    # Continue here. Sanity check the file and then fire R script, collect the output.
+    # and put into databse.
+    # While this is going on the user should see a 'waiting' page
+    # When it's done the user should be shown the output
+    # For bonus points, same an md5sum of the file and link it to the uuid.
+    # Maybe use the md5sum instead of the uuid
     os.chdir(uploadpath)
     plink_run = run(
         ["plink1.9", "--23file", filename], stdout=PIPE, stderr=PIPE, encoding="utf-8"
@@ -198,8 +198,8 @@ def results(upload_id):
     else:
         return render_template("waiting.html")
 
-    ## Yes, this probably should use SQL instead of CSV files.
-    ## But this is quicker for now.
+    # Yes, this probably should use SQL instead of CSV files.
+    # But this is quicker for now.
     results["A_prob"] = round(results["A_prob"], 2)
     results["B_prob"] = round(results["B_prob"], 2)
     results["C_prob"] = round(results["C_prob"], 2)
@@ -209,13 +209,6 @@ def results(upload_id):
     # results['DPB1_prob']=round(results['DPB1_prob'],2)
 
     return render_template("results.html", results=results)
-
-
-@app.route("/test")
-def test_something():
-    result = add_together.delay(23, 42)
-    a = result.wait()
-    return (str(a))
 
 
 if __name__ == "__main__":
