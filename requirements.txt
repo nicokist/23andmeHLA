@@ -1,6 +1,6 @@
 Flask==0.12.2
 Flask-Uploads==0.2.1
-Celery==4.1.0
+Celery==4.1.1
 redis==2.10.6
 gunicorn==19.7.1
 gevent

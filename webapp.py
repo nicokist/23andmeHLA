@@ -172,6 +172,10 @@ def upload_file():
 def results(upload_id):
     if not os.path.exists(os.path.join(app.config["UPLOAD_FOLDER"], upload_id)):
         abort(404)
+    if "celery_task_id" not in session:
+        flash("Session timed out, please resubmit your genome.")
+        return redirect('/')
+
     celery_result = AsyncResult(session["celery_task_id"])
     if celery_result.ready():
         print(celery_result.result["plink"]["stdout"], flush=True)
