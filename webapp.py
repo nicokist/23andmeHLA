@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 import sys
-from flask import Flask, request, redirect, url_for, send_from_directory, flash, render_template, abort, session
+from flask import (
+    Flask,
+    request,
+    redirect,
+    url_for,
+    send_from_directory,
+    flash,
+    render_template,
+    abort,
+    session,
+)
 from werkzeug.utils import secure_filename
 import os
 import uuid
@@ -38,7 +48,7 @@ def make_celery(app):
 app.config.update(
     CELERY_BROKER_URL="redis://some-redis:6379",
     CELERY_RESULT_BACKEND="redis://some-redis:6379",
-    MAX_CONTENT_LENGTH=50 * 1024 * 1024
+    MAX_CONTENT_LENGTH=50 * 1024 * 1024,
 )
 celery = make_celery(app)
 
@@ -75,7 +85,7 @@ def getHLAs(uploadpath, filename, ethnicity):
         "stdout": HIBAG_run.stdout,
         "stderr": HIBAG_run.stderr,
     }
-    return ({"plink": plink_serial, "HIBAG": HIBAG_serial})
+    return {"plink": plink_serial, "HIBAG": HIBAG_serial}
 
 
 UPLOAD_FOLDER = "/app/uploads/"
@@ -133,19 +143,19 @@ def upload_file():
                 flash("Error: Improperly formatted file")
                 return redirect(request.url)
 
-            if (request.values["ethnicity"] == "European"):
+            if request.values["ethnicity"] == "European":
                 session["celery_task_id"] = getHLAs.delay(
                     uploadpath, filename, "European"
                 ).id
-            if (request.values["ethnicity"] == "Asian"):
+            if request.values["ethnicity"] == "Asian":
                 session["celery_task_id"] = getHLAs.delay(
                     uploadpath, filename, "Asian"
                 ).id
-            if (request.values["ethnicity"] == "Hispanic"):
+            if request.values["ethnicity"] == "Hispanic":
                 session["celery_task_id"] = getHLAs.delay(
                     uploadpath, filename, "Hispanic"
                 ).id
-            if (request.values["ethnicity"] == "African"):
+            if request.values["ethnicity"] == "African":
                 session["celery_task_id"] = getHLAs.delay(
                     uploadpath, filename, "African"
                 ).id
